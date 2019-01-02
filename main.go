@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -13,8 +14,6 @@ import (
 )
 
 const (
-	path = ""
-	revision = ""
 	writePathPrefix = "/tmp/gitsnap/dev/"
 )
 
@@ -58,7 +57,11 @@ func writeFile(reader io.Reader, path string) error {
 }
 
 func main() {
-	files, err := listFiles(path, revision)
+	path := flag.String("path", ".", "/path/to/.gitdir")
+	revision := flag.String("revision", "", "git revision")
+	flag.Parse()
+
+	files, err := listFiles(*path, *revision)
 	if err != nil {
 		log.Fatal(err)
 	}
