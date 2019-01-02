@@ -13,11 +13,7 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
 )
 
-const (
-	writePathPrefix = "/tmp/gitsnap/dev/"
-)
-
-func listFiles(path string, revision string) (*object.FileIter, error){
+func listFiles(path string, revision string) (*object.FileIter, error) {
 	repos, err := git.PlainOpen(path)
 	if err != nil {
 		return nil, err
@@ -56,9 +52,32 @@ func writeFile(reader io.Reader, path string) error {
 	return err
 }
 
+func copyFile(file *object.File, pathPrefix string) error {
+	reader, err := file.Reader()
+	if err != nil {
+		return err
+	}
+
+	writePath := pathPrefix + file.Name
+	err = writeFile(reader, writePath)
+	if err != nil {
+		return err
+	}
+
+	err = reader.Close()
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Done : " + writePath)
+
+	return nil
+}
+
 func main() {
 	path := flag.String("path", ".", "/path/to/.gitdir")
 	revision := flag.String("revision", "", "git revision")
+	pathPrefix := flag.String("path-prefix", "/tmp/gitsnap/dev/", "/path/to/prefix/destination")
 	flag.Parse()
 
 	files, err := listFiles(*path, *revision)
@@ -67,26 +86,9 @@ func main() {
 	}
 
 	err = files.ForEach(func(file *object.File) error {
-		reader, err := file.Reader()
-		if err != nil {
-			return err
-		}
-
-		writePath := writePathPrefix + file.Name
-		err = writeFile(reader, writePath)
-		if err != nil {
-			return err
-		}
-
-		err = reader.Close()
-		if err != nil {
-			return err
-		}
-
-		fmt.Println("Done : " + writePath)
-
-		return nil
+		return copyFile(file, *pathPrefix)
 	})
+
 	if err != nil {
 		log.Fatal(err)
 	}
