@@ -2,77 +2,10 @@ package main
 
 import (
 	"flag"
-	"fmt"
-	"io"
 	"log"
-	"os"
-	"path/filepath"
 
-	"gopkg.in/src-d/go-git.v4"
-	"gopkg.in/src-d/go-git.v4/plumbing"
-	"gopkg.in/src-d/go-git.v4/plumbing/object"
+	"github.com/syucream/gitsnap/pkg/gitsnap"
 )
-
-func listFiles(path string, revision string) (*object.FileIter, error) {
-	repos, err := git.PlainOpen(path)
-	if err != nil {
-		return nil, err
-	}
-
-	hash, err := repos.ResolveRevision(plumbing.Revision(revision))
-	if err != nil {
-		return nil, err
-	}
-
-	commit, err := repos.CommitObject(*hash)
-	if err != nil {
-		return nil, err
-	}
-
-	tree, err := commit.Tree()
-	if err != nil {
-		return nil, err
-	}
-
-	return tree.Files(), nil
-}
-
-func writeFile(reader io.Reader, path string) error {
-	err := os.MkdirAll(filepath.Dir(path), 0755)
-	if err != nil {
-		return err
-	}
-
-	file, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-
-	_, err = io.Copy(file, reader)
-	return err
-}
-
-func copyFile(file *object.File, pathPrefix string) error {
-	reader, err := file.Reader()
-	if err != nil {
-		return err
-	}
-
-	writePath := pathPrefix + file.Name
-	err = writeFile(reader, writePath)
-	if err != nil {
-		return err
-	}
-
-	err = reader.Close()
-	if err != nil {
-		return err
-	}
-
-	fmt.Println("Done : " + writePath)
-
-	return nil
-}
 
 func main() {
 	path := flag.String("path", ".", "/path/to/.gitdir")
@@ -80,16 +13,7 @@ func main() {
 	pathPrefix := flag.String("path-prefix", "/tmp/gitsnap/dev/", "/path/to/prefix/destination")
 	flag.Parse()
 
-	files, err := listFiles(*path, *revision)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = files.ForEach(func(file *object.File) error {
-		return copyFile(file, *pathPrefix)
-	})
-
-	if err != nil {
+	if err := gitsnap.CreateSnapshotFiles(*path, *pathPrefix, *revision); err != nil {
 		log.Fatal(err)
 	}
 }
